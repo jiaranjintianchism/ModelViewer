@@ -2,6 +2,9 @@
   <header>Hunyuan Model Viewer</header>
   <main>
     <section class="sidebar">
+      <div v-if="wsStatus !== 'connected'" class="alert">
+        与服务器连接状态：{{ wsStatus }}
+      </div>
       <PromptForm @submitted="handleSubmit" :loading="loading" />
       <ModelList :models="models" @select="handleSelect" />
     </section>
@@ -18,7 +21,7 @@ import ModelList from './components/ModelList.vue';
 import Viewer from './components/Viewer.vue';
 import { useWebSocket } from './composables/useWebSocket';
 
-const { models, connect } = useWebSocket();
+const { models, status: wsStatus, connect } = useWebSocket();
 connect();
 
 const loading = ref(false);
@@ -46,4 +49,13 @@ function handleSelect(url) {
 </script>
 
 <style scoped>
+.alert{
+  background:#dc2626;
+  color:#fff;
+  padding:.5rem;
+  margin-bottom:.5rem;
+  border-radius:4px;
+  text-align:center;
+  font-size:.9rem;
+}
 </style>

@@ -1,5 +1,11 @@
 <template>
   <canvas ref="canvas"></canvas>
+  <template v-if="loading">
+    <div class="overlay">
+      <div v-if="errorMsg">{{ errorMsg }}</div>
+      <div v-else>加载中 {{ progress }}%</div>
+    </div>
+  </template>
 </template>
 
 <script setup>
@@ -12,6 +18,9 @@ const props = defineProps({ modelUrl: String });
 const canvas = ref(null);
 let renderer, scene, camera, controls, loader;
 let currentModel;
+const loading = ref(false);
+const progress = ref(0);
+const errorMsg = ref('');
 
 function init() {
   scene = new THREE.Scene();
@@ -72,6 +81,9 @@ window.addEventListener('resize', () => {
 
 function loadModel(url) {
   if (!url) return;
+  loading.value = true;
+  progress.value = 0;
+  errorMsg.value = '';
   loader.load(
     url,
     (gltf) => {
@@ -79,10 +91,17 @@ function loadModel(url) {
       currentModel = gltf.scene;
       scene.add(currentModel);
       fitCameraToObject(currentModel);
+      loading.value = false;
     },
-    undefined,
+    (xhr) => {
+      if (xhr.total) {
+        progress.value = Math.round((xhr.loaded / xhr.total) * 100);
+      }
+    },
     (error) => {
       console.error('模型加载失败', error);
+      errorMsg.value = '加载失败，3 秒后自动重试…';
+      setTimeout(() => loadModel(url), 3000);
     }
   );
 }
@@ -128,5 +147,18 @@ canvas {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.overlay {
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,0.5);
+  color:#fff;
+  font-size:1rem;
+  pointer-events:none;
 }
 </style>
