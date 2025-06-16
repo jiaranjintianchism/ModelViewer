@@ -12,6 +12,7 @@
 import { watch, onMounted, onUnmounted, ref } from 'vue';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const props = defineProps({ modelUrl: String });
@@ -58,7 +59,12 @@ function init() {
   const axes = new THREE.AxesHelper(5);
   scene.add(axes);
 
-  loader = new GLTFLoader();
+  const manager = new THREE.LoadingManager();
+  loader = new GLTFLoader(manager);
+  // Configure DRACO loader (uses Google hosted decoder)
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+  loader.setDRACOLoader(dracoLoader);
   animate();
 }
 
@@ -96,6 +102,9 @@ function loadModel(url) {
     (xhr) => {
       if (xhr.total) {
         progress.value = Math.round((xhr.loaded / xhr.total) * 100);
+      } else {
+        // total may be 0 for compressed/chunked responses; show spinner
+        progress.value = 0;
       }
     },
     (error) => {
