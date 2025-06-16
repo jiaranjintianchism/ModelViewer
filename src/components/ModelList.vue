@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <div class="card model-list">
     <h3>模型列表</h3>
     <ul>
       <li
         v-for="m in models"
         :key="m.id"
-        style="display: flex; align-items: center; gap: 0.5rem;"
+        class="model-item"
       >
         <span @click="emit('select', m.url)" style="flex:1;cursor:pointer;">{{ m.id }}</span>
         <button @click.stop="download(m.url, m.id)">下载</button>
@@ -40,29 +40,35 @@ ul {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
-li {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  background: #333;
+.model-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-tertiary);
   cursor: pointer;
+  transition: background-color 0.2s;
   justify-content: space-between;
 }
-li:hover {
-  background: #444;
+.model-item:hover {
+  background: var(--button-hover-bg);
 }
 button {
-  background: #3b82f6;
+  background: var(--accent-color);
   color: #fff;
   border: none;
-  border-radius: 3px;
-  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+  padding: 0.35rem 0.9rem;
   cursor: pointer;
-  font-size: 0.95em;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
 }
 button:hover {
-  background: #2563eb;
+  background: var(--accent-color-darker);
 }
 
 </style>

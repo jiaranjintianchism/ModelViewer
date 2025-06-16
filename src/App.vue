@@ -253,6 +253,7 @@ main {
 
 .mode-selector button:hover {
   color: var(--primary-text);
+  transform: translateY(-1px);
 }
 
 .mode-selector button.active {
