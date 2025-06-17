@@ -132,8 +132,7 @@ async function submitGenerationJob() {
   }
 
   try {
-    // const backendUrl = import.meta.env.VITE_SERVER_URL || 'http://122.51.52.42:3000'; // Use environment variable or fallback
-    const backendUrl = 'http://122.51.52.42:3000'; // Hardcoding for now as per previous context
+    const backendUrl = import.meta.env.VITE_SERVER_URL // Use environment variable or fallback
     const response = await fetch(`${backendUrl}/generate-model`, {
       method: 'POST',
       headers: {
