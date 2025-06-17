@@ -30,11 +30,40 @@
         </div>
       </div>
 
+      <!-- 高级选项折叠面板 -->
+      <details class="advanced" v-cloak>
+        <summary>高级选项</summary>
+        <div class="adv-grid">
+          <label><input type="checkbox" v-model="removeBg" /> 抠图 Remove BG</label>
+          <label class="full"><span>推理步数: {{ steps }}</span>
+            <input type="range" v-model.number="steps" min="1" max="100" step="1" />
+          </label>
+          <label class="full"><span>指导尺度: {{ guidanceScale }}</span>
+            <input type="range" v-model.number="guidanceScale" min="1" max="15" step="0.5" />
+          </label>
+          <label><input type="number" v-model.number="octreeResolution" min="16" max="512" step="16" /> Octree 分辨率</label>
+          <label>
+            纹理分辨率
+            <select v-model.number="paintResolution">
+              <option :value="512">512</option>
+              <option :value="768">768</option>
+            </select>
+          </label>
+          <label>
+            视角数量
+            <select v-model.number="maxView">
+              <option v-for="n in [6,7,8,9]" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
       <button type="submit" @click="submitGenerationJob">生成模型</button>
       <p>{{ status }}</p>
       <ModelList :models="models" @select="handleSelect" />
     </section>
     <section class="viewer">
+      <div v-if="loading" class="loading-overlay"><div class="spinner"></div></div>
       <Viewer :modelUrl="currentModelUrl" />
     </section>
   </main>
@@ -53,8 +82,17 @@ connect();
 const generationMode = ref('text');
 const prompt = ref('');
 const imageUrl = ref('');
-const imageBase64 = ref(null);
+const imageFile = ref(null); // raw File object
 const imageBase64Preview = ref(null);
+
+// 高级选项 refs
+const removeBg = ref(true);
+const steps = ref(50);
+const guidanceScale = ref(7.5);
+const octreeResolution = ref(256);
+const paintResolution = ref(512);
+const maxView = ref(6);
+
 const status = ref('Ready');
 const loading = ref(false);
 const currentModelUrl = ref(null);
@@ -62,14 +100,15 @@ const currentModelUrl = ref(null);
 function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) {
-    imageBase64.value = null;
+    imageFile.value = null;
     imageBase64Preview.value = null;
     return;
   }
+  imageFile.value = file;
   const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
     status.value = '错误：不支持的文件格式。请上传 JPG, PNG, 或 WEBP 图片。';
-    imageBase64.value = null;
+    imageFile.value = null;
     imageBase64Preview.value = null;
     event.target.value = null; 
     return;
@@ -77,7 +116,6 @@ function handleFileUpload(event) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    imageBase64.value = e.target.result.split(',')[1]; 
     imageBase64Preview.value = e.target.result; 
     status.value = '图片已选择。';
     imageUrl.value = ''; 
@@ -85,7 +123,7 @@ function handleFileUpload(event) {
   reader.onerror = (error) => {
     console.error('FileReader error: ', error);
     status.value = '读取文件失败。';
-    imageBase64.value = null;
+    imageFile.value = null;
     imageBase64Preview.value = null;
   };
   reader.readAsDataURL(file);
@@ -99,29 +137,20 @@ async function submitGenerationJob() {
   // Logic to remove previously loaded model from Three.js scene if Viewer component exposes a method or event
   // For now, we assume Viewer handles new modelUrl by replacing old one.
 
-  let payload = {};
+  const fd = new FormData();
   if (generationMode.value === 'text') {
     if (!prompt.value.trim()) {
       status.value = '错误：文本提示不能为空。';
       loading.value = false;
       return;
     }
-    payload = { prompt: prompt.value };
+    fd.append('prompt', prompt.value.trim());
   } else if (generationMode.value === 'image') {
-    if (imageBase64.value) {
-      payload = { imageBase64: imageBase64.value };
-    } else if (imageUrl.value.trim()) {
-      // Basic URL validation (optional, can be more robust)
-      try {
-        new URL(imageUrl.value);
-      } catch (_) {
-        status.value = '错误：图片URL格式不正确。';
-        loading.value = false;
-        return;
-      }
-      payload = { imageUrl: imageUrl.value };
+    if (imageFile.value) {
+      fd.append('file', imageFile.value);
     } else {
-      status.value = '错误：请提供图片URL或上传图片文件。';
+      // Basic URL validation (optional, can be more robust)
+      status.value = '错误：请上传图片文件。';
       loading.value = false;
       return;
     }
@@ -131,15 +160,20 @@ async function submitGenerationJob() {
     return;
   }
 
+  // 附加高级参数（始终携带，保持后端默认一致）
+  fd.append('bg_remove', removeBg.value);
+  fd.append('steps', steps.value);
+  fd.append('guidance_scale', guidanceScale.value);
+  fd.append('octree_resolution', octreeResolution.value);
+  fd.append('paint_resolution', paintResolution.value);
+  fd.append('max_view', maxView.value);
+
   try {
-    // const backendUrl = import.meta.env.VITE_SERVER_URL || 'http://122.51.52.42:3000'; // Use environment variable or fallback
-    const backendUrl = 'http://122.51.52.42:3000'; // Hardcoding for now as per previous context
-    const response = await fetch(`${backendUrl}/generate-model`, {
+    // const backendUrl = import.meta.env.VITE_SERVER_URL 
+    const backendUrl = import.meta.env.VITE_SERVER_URL || window.location.origin;
+    const response = await fetch(`${backendUrl}/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: fd,
     });
 
     if (!response.ok) {
@@ -148,8 +182,8 @@ async function submitGenerationJob() {
     }
 
     const result = await response.json();
-    status.value = `任务已提交: ${result.jobId}。等待模型...`;
-    currentJobId.value = result.jobId; // Track current job
+    status.value = `任务已提交: ${result.id}。等待模型...`;
+    currentJobId.value = result.id; // Track current job
     console.log('Job submission response:', result);
   } catch (error) {
     status.value = `提交任务失败: ${error.message}`;
@@ -381,5 +415,32 @@ main {
   text-align: center;
   font-size: 0.9rem;
 }
+
+details.advanced {
+  margin-top: 1rem;
+  background: var(--background-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+summary {
+  cursor: pointer;
+  outline: none;
+  color: var(--primary-text);
+}
+.adv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem 1rem;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+}
+
+label.full {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+}
+[v-cloak] { display: none; }
 
 </style>

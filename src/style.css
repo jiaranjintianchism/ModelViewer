@@ -4,10 +4,13 @@
   --background-primary: #1A1B1E;
   --background-secondary: #252629;
   --background-tertiary: #36373B;
+  --text-placeholder: #B0B0B0;
   --accent-color: #007AFF;
   --accent-color-darker: #0056b3;
   --border-color: #404144;
   --button-hover-bg: #4A4B4F;
+  /* Sidebar 自动宽度：280px-420px 之间，约占 26vw */
+  --sidebar-width: clamp(280px, 26vw, 420px);
   --card-bg: var(--background-secondary);
   --card-border: var(--border-color);
 }
@@ -47,7 +50,8 @@ main {
 }
 
 .sidebar {
-  width: 400px;
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
   background: var(--background-secondary);
   padding: 1.5rem;
   overflow: auto;
@@ -58,6 +62,7 @@ main {
 
 .viewer {
   flex: 1;
+  min-width: 0;
   position: relative;
   background: #000;
   display: flex;
@@ -83,7 +88,7 @@ button {
   font-weight: 600;
   transition: background-color 0.2s;
 }
-button:hover {
+button:hover:enabled {
   background: var(--accent-color-darker);
 }
 button:disabled {
@@ -103,10 +108,36 @@ textarea {
   font-family: inherit;
 }
 
+/* 上传区域 */
+.styled-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 2px dashed var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.styled-upload-area:hover {
+  border-color: var(--accent-color);
+  background: rgba(0, 122, 255, 0.08);
+}
+.upload-area-text {
+  margin-top: 0.5rem;
+}
+
 /* 滚动条美化 */
 ::-webkit-scrollbar {
   width: 8px;
 }
+/* Placeholder focus fade */
+textarea:focus::placeholder,
+input:focus::placeholder {
+  opacity: 0;
+}
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -116,4 +147,26 @@ textarea {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 6px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
