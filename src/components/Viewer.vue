@@ -17,7 +17,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const props = defineProps({ modelUrl: String });
 const canvas = ref(null);
-let renderer, scene, camera, controls, loader;
+let renderer, scene, camera, controls, loader, dirLight, ambientLight, hemiLight;
 let currentModel;
 const loading = ref(false);
 const progress = ref(0);
@@ -37,27 +37,19 @@ function init() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(5, 10, 7.5);
-  scene.add(light);
+  dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(5, 10, 7.5);
+  scene.add(dirLight);
 
   // 环境光让整体更柔和
-  const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-  scene.add(ambient);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
 
   // 半球光提升空间感
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+  hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
   hemiLight.position.set(0, 20, 0);
   scene.add(hemiLight);
 
-  // 网格地面辅助，帮助用户感知空间
-  const grid = new THREE.GridHelper(10, 20, 0x555555, 0x555555);
-  grid.position.y = -0.01; // 略微下沉避免与模型z-fighting
-  scene.add(grid);
-
-  // 坐标轴辅助
-  const axes = new THREE.AxesHelper(5);
-  scene.add(axes);
 
   const manager = new THREE.LoadingManager();
   loader = new GLTFLoader(manager);
@@ -136,6 +128,40 @@ function fitCameraToObject(object) {
   camera.position.z += size;
   camera.lookAt(center);
 }
+
+// ========= 可调光照相关 =========
+function setLightColor(color) {
+  if (dirLight) dirLight.color.set(color);
+}
+function setLightIntensity(intensity) {
+  if (dirLight) dirLight.intensity = intensity;
+}
+
+function setAmbientIntensity(intensity) {
+  if (ambientLight) ambientLight.intensity = intensity;
+  if (hemiLight) hemiLight.intensity = intensity * 1.5; // 半球光也相应调整，保持比例关系
+  console.log('Setting ambient light intensity to:', intensity);
+}
+function setLightDirection(pitch, yaw) {
+  if (dirLight) {
+    const r = 10;
+    const radP = THREE.MathUtils.degToRad(pitch);
+    const radY = THREE.MathUtils.degToRad(yaw);
+    dirLight.position.set(
+      r * Math.cos(radP) * Math.sin(radY),
+      r * Math.sin(radP),
+      r * Math.cos(radP) * Math.cos(radY)
+    );
+  }
+}
+
+// 将方法暴露给父组件
+defineExpose({
+  setLightColor,
+  setLightIntensity,
+  setLightDirection,
+  setAmbientIntensity,
+});
 
 watch(
   () => props.modelUrl,

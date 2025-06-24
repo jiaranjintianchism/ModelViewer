@@ -7,8 +7,12 @@
         :key="m.id"
         class="model-item"
       >
-        <span @click="emit('select', m.url)" style="flex:1;cursor:pointer;">{{ m.id }}</span>
-        <button @click.stop="download(m.url, m.id)">下载</button>
+        <span 
+          @click="emit('select', m.url)" 
+          class="model-name" 
+          :title="m.id"
+        >{{ m.id }}</span>
+        <button @click.stop="download(m.url, m.id)" class="download-btn">下载</button>
       </li>
     </ul>
   </div>
@@ -53,6 +57,21 @@ ul {
   cursor: pointer;
   transition: background-color 0.2s;
   justify-content: space-between;
+  min-width: 0; /* 防止子元素导致容器扩展 */
+}
+
+.model-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  margin-right: 8px; /* 确保与按钮有足够间距 */
+}
+
+.download-btn {
+  flex-shrink: 0; /* 防止按钮被压缩 */
+  min-width: 60px; /* 确保按钮有最小宽度 */
 }
 .model-item:hover {
   background: var(--button-hover-bg);

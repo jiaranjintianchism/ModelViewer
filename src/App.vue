@@ -1,7 +1,7 @@
 <template>
   <header>Hunyuan Model Viewer</header>
-  <main>
-    <section class="sidebar">
+  <main :class="appClasses">
+    <section class="sidebar" v-show="showSidebar">
       <div v-if="wsStatus !== 'connected'" class="alert">
         与服务器连接状态：{{ wsStatus }}
       </div>
@@ -61,17 +61,48 @@
       <button type="submit" @click="submitGenerationJob">生成模型</button>
       <p>{{ status }}</p>
       <ModelList :models="models" @select="handleSelect" />
+
+<!-- 光照调节面板 -->
+
+
     </section>
     <section class="viewer">
       <div v-if="loading" class="loading-overlay"><div class="spinner"></div></div>
-      <Viewer :modelUrl="currentModelUrl" />
+      <Viewer ref="viewerRef" :modelUrl="currentModelUrl" />
     </section>
   </main>
+
+<!-- 左侧汉堡菜单按钮 -->
+<button class="hamburger-menu" :class="{ 'active': !showSidebar }" @click="toggleSidebar">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
+
+<!-- 右侧浮动光照面板 -->
+<LightingPanel
+  v-if="showLighting"
+  class="floating-lighting open"
+  v-model:color="lightColor"
+  v-model:intensity="lightIntensity"
+  v-model:pitch="lightPitch"
+  v-model:yaw="lightYaw"
+  v-model:ambient="ambientIntensity"
+/>
+<!-- 右侧展开/收起按钮 -->
+<button class="settings-toggle" :class="{ 'active': showLighting }" @click="showLighting = !showLighting" aria-label="显示或隐藏光照设置">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</button>
+
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch, computed } from 'vue';
 import Viewer from './components/Viewer.vue';
+import LightingPanel from './components/LightingPanel.vue';
 import ModelList from './components/ModelList.vue';
 import { useWebSocket } from './composables/useWebSocket';
 
@@ -86,16 +117,61 @@ const imageFile = ref(null); // raw File object
 const imageBase64Preview = ref(null);
 
 // 高级选项 refs
-const removeBg = ref(true);
+const removeBg = ref(false);
 const steps = ref(50);
 const guidanceScale = ref(7.5);
-const octreeResolution = ref(256);
+const octreeResolution = ref(128);
 const paintResolution = ref(512);
-const maxView = ref(6);
+const maxView = ref(8);
 
+// 状态
 const status = ref('Ready');
+const currentModelUrl = ref('');
 const loading = ref(false);
-const currentModelUrl = ref(null);
+
+// 光照参数
+const lightColor = ref('#ffffff');
+const lightIntensity = ref(1);
+const lightPitch = ref(45);
+const lightYaw = ref(45);
+const ambientIntensity = ref(0.4); // 环境光强度
+
+// 面板显隐
+const showSidebar = ref(true);
+const showLighting = ref(false);
+
+const viewerRef = ref(null);
+
+const appClasses = computed(() => {
+  return {
+    'lighting-visible': showLighting
+  };
+});
+
+const updateLight = () => {
+  if (viewerRef.value) {
+    viewerRef.value.setLightColor(lightColor.value);
+    viewerRef.value.setLightIntensity(lightIntensity.value);
+    viewerRef.value.setLightDirection(lightPitch.value, lightYaw.value);
+    viewerRef.value.setAmbientIntensity(ambientIntensity.value);
+  }
+};
+
+watch(lightColor, updateLight);
+watch(lightIntensity, updateLight);
+watch(lightPitch, updateLight);
+watch(lightYaw, updateLight);
+watch(ambientIntensity, updateLight);
+
+const toggleSidebar = () => {
+  showSidebar.value = !showSidebar.value;
+  console.log('Sidebar toggled:', showSidebar.value);
+};
+
+onMounted(() => {
+  // 初始化光照
+  updateLight();
+});
 
 function handleFileUpload(event) {
   const file = event.target.files[0];
@@ -241,29 +317,21 @@ header {
 
 main {
   display: flex;
-  height: calc(100vh - 70px); /* Adjust based on header height */
-  background-color: var(--background-primary);
-  color: var(--primary-text);
-}
-
-.sidebar {
-  width: 400px; /* Slightly wider sidebar */
-  padding: 1.5rem;
+  width: 100%;
+  height: calc(100vh - 60px); /* 减去header高度 */
+  overflow: hidden;
   background-color: var(--background-secondary);
-  /* No border-right, viewer will have its own padding */
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem; /* Increased gap */
-  overflow-y: auto;
+  position: relative; /* 为绝对定位提供参考 */
 }
 
 .viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
   flex-grow: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
 }
+
+/* 不再需要这个规则 */
 
 .mode-selector {
   display: flex;
@@ -423,11 +491,13 @@ details.advanced {
   border-radius: 8px;
   padding: 0.6rem 0.8rem;
 }
+
 summary {
   cursor: pointer;
   outline: none;
   color: var(--primary-text);
 }
+
 .adv-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -442,5 +512,109 @@ label.full {
   flex-direction: column;
 }
 [v-cloak] { display: none; }
+
+.floating-lighting {
+  position: fixed;
+  top: 70px; /* header 高度 */
+  right: 0;
+  width: 280px;
+  height: calc(100vh - 70px);
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+.floating-lighting.open {
+  transform: translateX(0);
+}
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 60px; /* 与header高度一致 */
+  width: 300px;
+  height: calc(100vh - 60px);
+  padding: 20px;
+  overflow-y: auto;
+  background-color: var(--background-primary);
+  border-right: 1px solid var(--border-color);
+  z-index: 100;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* 汉堡菜单按钮 */
+.hamburger-menu {
+  position: fixed;
+  top: 50%;
+  left: 5px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: rgb(242, 242, 242);
+  border: none;
+  border-radius: 50%;
+  z-index: 1100;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.3s;
+}
+
+.hamburger-menu:hover {
+  background: #e0e0e0;
+}
+
+.hamburger-menu span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background-color: #333;
+  transition: all 0.3s;
+}
+
+.hamburger-menu.active span:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-menu.active span:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+/* 设置按钮 */
+.settings-toggle {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: all 0.3s;
+}
+
+.settings-toggle:hover {
+  background: var(--accent-color-darker);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.settings-toggle.active {
+  background: var(--accent-color-darker);
+}
 
 </style>
