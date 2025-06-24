@@ -117,12 +117,12 @@ const imageFile = ref(null); // raw File object
 const imageBase64Preview = ref(null);
 
 // 高级选项 refs
-const removeBg = ref(false);
+const removeBg = ref(true);
 const steps = ref(50);
 const guidanceScale = ref(7.5);
-const octreeResolution = ref(128);
+const octreeResolution = ref(256);
 const paintResolution = ref(512);
-const maxView = ref(8);
+const maxView = ref(6);
 
 // 状态
 const status = ref('Ready');
