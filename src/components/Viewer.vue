@@ -37,16 +37,17 @@ function init() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  // 方向光作为主光源
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // 提高默认强度
   dirLight.position.set(5, 10, 7.5);
   scene.add(dirLight);
 
   // 环境光让整体更柔和
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // 提高默认强度
   scene.add(ambientLight);
 
   // 半球光提升空间感
-  hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+  hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8); // 提高默认强度
   hemiLight.position.set(0, 20, 0);
   scene.add(hemiLight);
 
@@ -138,8 +139,8 @@ function setLightIntensity(intensity) {
 }
 
 function setAmbientIntensity(intensity) {
+  // 现在此滑块只控制环境光，解除与半球光的耦合
   if (ambientLight) ambientLight.intensity = intensity;
-  if (hemiLight) hemiLight.intensity = intensity * 1.5; // 半球光也相应调整，保持比例关系
   console.log('Setting ambient light intensity to:', intensity);
 }
 function setLightDirection(pitch, yaw) {

@@ -36,7 +36,7 @@
           <h5>射灯强度</h5>
           <div class="slider-container">
             <span class="slider-label">弱</span>
-            <input type="range" min="0" max="5" step="0.1" v-model.number="internalIntensity" class="styled-slider"/>
+            <input type="range" min="0" max="10" step="0.1" v-model.number="internalIntensity" class="styled-slider"/>
             <span class="slider-label">强</span>
           </div>
         </div>
@@ -45,7 +45,7 @@
           <h5>平面光强度</h5>
           <div class="slider-container">
             <span class="slider-label">弱</span>
-            <input type="range" min="0" max="2" step="0.1" v-model.number="ambientIntensity" class="styled-slider"/>
+            <input type="range" min="0" max="10" step="0.2" v-model.number="ambientIntensity" class="styled-slider"/>
             <span class="slider-label">强</span>
           </div>
         </div>
